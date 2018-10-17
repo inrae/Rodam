@@ -1,0 +1,189 @@
+---
+title: "Rodam package"
+author: "Daniel Jacob"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: FALSE
+colorlinks: true
+urlcolor: blue
+vignette: >
+  %\VignetteIndexEntry{Wrapper Functions for ODAM (Open Data for Access and Mining) Web Services}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, fig.align=TRUE)
+```
+<style>
+body { max-width:1200px; line-height: 18px; }
+</style>
+
+## Demonstration of the functionnalities of the R ODAM package 
+
+### Description
+
+* 'ODAM' (Open Data for Access and Mining) is a framework that implements a simple way to make research data broadly accessible and fully available for reuse, including by a script language such as R. The main purpose is to make a dataset accessible online with a minimal effort from the data provider, and to allow any scientists or bioinformaticians to be able to explore the dataset and then extract a subpart or the totality of the data according to their needs.
+
+* The Rodam package has only one class, odamws that provides methods to allow you to retrieve online data using 'ODAM' Web Services. This obviously requires that data are implemented according the 'ODAM' approach , namely that the data subsets were deposited in the suitable data repository in the form of TSV files associated with  their metadata also described  in TSV files.
+* The R ODAM package offers a set of functions for retrieve data and their metadata of datasets that are implemented help with the "Experimental Data Table Management System" (EDTMS) called ODAM, which stands for "Open Data for Access and Mining".
+
+* See https://www.slideshare.net/danieljacob771282/odam-open-data-access-and-mining for further information.
+
+
+
+<br>
+
+### Load the R ODAM package
+
+```{r init0, eval=TRUE, include=TRUE}
+library(Rodam)
+```
+
+<br>
+
+### Initialize the ODAM object
+
+Initialize the 'ODAM' object with the wanted dataset along with its corresponding URL of webservice
+
+```{r init-object, echo=TRUE}
+dh <- new('odamws', wsURL='https://pmb-bordeaux.fr/getdata/', dsname='frim1')
+```
+<br>
+
+### Get the Data Tree
+
+```{r getdatatree, echo=TRUE}
+options(width=256)
+options(warn=-1)
+options(stringsAsFactors=FALSE)
+
+show(dh)
+```
+
+<br>
+
+### Get all WebService entries
+
+Get all WebService entries defined in the data subset 'samples'
+
+```{r getdata1, echo=TRUE}
+dh$getWSEntryByName("samples")
+```
+
+#### NOTE:
+
+a 'WSEntry' is an alias name associated with an attribute that allows user to query the data subset by putting a filter condition (i.e. a selection constraint) on the corresponding attribute. Not all attributes have a WSEntry but only few ones, especially the attributes within the identifier and factor categories. For instance, the WSEntry of the 'SampleID' attribute is 'sample'. Thus, if you want to select only samples with their ID equal to 365, you have to specify the filter condition as  'sample/365'.
+
+<br><br>
+
+### Get data from 'samples' subset with a constraint
+
+```{r getdata2, echo=TRUE}
+data <- dh$getDataByName('samples','sample/365')
+data
+```
+
+<br>
+
+But if this WSEntry concept is not clear for you, you can retrieve the full data subset, then performe a local selection as shown below :
+
+```{r getdata3, echo=TRUE}
+data <- dh$getDataByName('samples') 
+data[data$SampleID==365, ]
+```
+
+<br>
+
+### Convert all numeric values of date and time  in a human-readable format
+
+```{r getdata4, echo=TRUE}
+data$HarvestDate <- dh$dateToStr(data$HarvestDate)
+data$HarvestHour <- dh$timeToStr(data$HarvestHour)
+data[data$SampleID==365, ]
+```
+
+<br><br>
+
+
+###  Get 'activome' data subset
+
+Get 'activome' data subset along with its metadata
+
+```{r getdata5, echo=TRUE}
+ds <- dh$getSubsetByName('activome')
+ds$samples   # Show the identifier defined in the data subset
+ds$facnames  # Show all factors defined in the data subset
+```
+
+```{r hide1, include=FALSE}
+options(width=150)
+```
+
+```{r getdata6, echo=TRUE}
+ds$varnames  # Show all quantitative variables defined in the data subset
+ds$qualnames # Show all qualitative variables defined in the data subset
+ds$WSEntry   # Show all WS entries defined in the data subset
+```
+
+<br>
+
+### Boxplot of all variables defined in ds$varnames
+
+```{r plot1, echo=TRUE, fig.align='center', fig.width=12, fig.height=12 }
+Rank <- simplify2array(lapply(ds$varnames, function(x) { round(mean(log10(ds$data[ , x]), na.rm=T)) }))
+cols <- c('red', 'orange', 'darkgreen', 'blue', 'purple')
+boxplot(log10(ds$data[, ds$varnames]), outline=F, horizontal=T, border=cols[Rank], las=2, cex.axis=0.8)
+```
+
+<br>
+
+
+### Find how many IDs in common  there are between the subsets
+
+Based on the subset network, the common ID to be considered is  the "SampleID" identifier
+
+```{r plot3, echo=TRUE}
+ refID <- "SampleID"
+ subsetList <- c( "samples", "activome", "qNMR_metabo", "cellwall_metabo" )
+ n <- length(subsetList)
+ Mintersubsets <- matrix(data=0, nrow=n, ncol=n)
+ for (i in 1:(n-1))
+     for (j in (i+1):n)
+          Mintersubsets[i,j] <- length(dh$getCommonID(refID,subsetList[i],subsetList[j]))
+ 
+ rownames(Mintersubsets) <- subsetList
+ colnames(Mintersubsets) <- subsetList
+ Mintersubsets[ -n, -1 ]
+```
+
+<br>
+
+### Get the merged data of two data subsets based on their common identifiers
+
+```{r getdata7, echo=TRUE}
+setNameList <- c("activome", "qNMR_metabo" )
+dsMerged <- dh$getSubsetByName(setNameList)
+```
+
+### Boxplot of all variables defined in ds$varnames
+```{r plot4, echo=TRUE, fig.align='center', fig.width=12, fig.height=18 }
+cols <- c( rep('red', length(dsMerged$varsBySubset[[setNameList[1]]])), 
+           rep('darkgreen', length(dsMerged$varsBySubset[[setNameList[2]]])) )
+boxplot(log10(dsMerged$data[, dsMerged$varnames]), outline=F, horizontal=T, border=cols, las=2, cex.axis=0.8)
+```
+<br><br>
+
+<hr>
+
+<br>
+
+
+### R Session Information
+```{r sessinfo, echo=TRUE}
+options(width=128)
+sessionInfo()
+```

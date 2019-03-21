@@ -1,7 +1,7 @@
 Package: Rodam
 Title: Wrapper Functions for 'ODAM' (Open Data for Access and Mining) Web Services
-Version: 0.1.5
-Date: 2018-10-12
+Version: 0.1.6
+Date: 2019-03-21
 Authors@R: c(
     person("Daniel", "Jacob", email="daniel.jacob@inra.fr", role=c("cre", "aut"), comment=c(ORCID="0000-0002-6687-7169")))
 Copyright: Institut National de la Recherche Agronomique (INRA)

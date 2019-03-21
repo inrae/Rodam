@@ -1,7 +1,7 @@
 require(RCurl)
 #' API layer for the ODAM web services
 #'
-#' @author Daniel Jacob - INRA UMR 1332 BFP (C) 2016
+#' @author Daniel Jacob - INRA UMR 1332 BFP (C) 2019
 #'
 #' @description the class that implements the API layer for the ODAM (Open Data for Access and Mining) web services.
 #'
@@ -10,6 +10,7 @@ require(RCurl)
 #' @rdname odamws
 #' @field wsURL defines the URL of the webservice - Must be specify when creating a new instance of the odamws object.
 #' @field dsname specifies the name of the Dataset to query - Must be specify when creating a new instance of the odamws object.
+#' @field delimiter specifies the delimiter used within data subset files 
 #' @field auth specifies the authentication code to access to the Dataset by this webservice (if required)
 #' @field subsets a data.frame object containing metadata related to the data subsets - Initialized during the instantiation step
 #' @field subsetNames a list of the data subset names - Initialized during the instantiation step
@@ -43,13 +44,14 @@ odamws <- setRefClass("odamws",
    methods = list(
    
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth=1)
+      initialize = function(wsURL, dsname, auth=1, delimiter="\t")
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
          wsURL <<- wsURL
          dsname <<- dsname
          auth <<- auth
+         delimiter <<- delimiter
 
          # Get subsets information
          subsets <<- getWS('subset')
@@ -115,7 +117,7 @@ odamws <- setRefClass("odamws",
       "Low level routine allowing to retrieve data or metadata from  a query formatted according the ODAM framework specifications - Returns a data.frame object. By default, i.e. with an empty query, a data.frame object containing metadata related to the data subsets is returned."
 
          myurl <- paste(wsURL,'/tsv/', dsname, '/', query,"?auth=",auth,sep="");
-         read.csv(textConnection(RCurl::getURL(myurl, ssl.verifypeer = FALSE)), head=TRUE, sep="\t");
+         read.csv(textConnection(RCurl::getURL(myurl, ssl.verifypeer = FALSE)), head=TRUE, sep=delimiter);
       },
 
       getWSEntryByName = function(setName) {
@@ -241,6 +243,49 @@ odamws <- setRefClass("odamws",
          ds1 <- getSubsetByName(setName1)
          ds2 <- getSubsetByName(setName2)
          unique(ds1$data[ ds1$data[, refID ] %in% ds2$data[, refID ], refID ])
+      },
+      
+      getSetInCommon = function(setNameList)
+      {
+      "Get the data subset in common with the data subset list 'setNameList'. Returns a list containing the elements :
+      
+          *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList, 
+          
+          *  setName : the data subset name corresponding to the refID"
+         setlines <- which(subsets$Subset %in% setNameList)
+         setIDS <- unique(sort(subsets[setlines, ]$Identifier))
+         if (length(setIDS)==1) {
+           refID <- setIDS
+           setName <- subsets$Subset[ subsets$SetID == min(subsets$SetID[subsets$Identifier==setIDS]) ]
+         } else {
+           setName <- subsets$Subset[ subsets$SetID == min(subsets$LinkID[ subsets$Identifier %in% setIDS ]) ]
+           refID <- subsets$Identifier[subsets$Subset==setName]
+         }
+         list(refID=refID, setName=setName)
+      },
+
+      getUpSetTable = function(setNameList)
+      {
+      " Return an encoded dataframe in binary and set up so that columns represent data subsets present in 'setNameList', and each row represents an element (ID). If an element (ID) is in the data subset it is represented as a 1 in that position, otherwise it is represented as a 0. Useful for use with the R package UpSetR (https://cran.r-project.org/package=UpSetR)"
+           # Get the data subset in common
+           R <- getSetInCommon(setNameList)
+           # Get the reference data subset
+           ds1 <- getSubsetByName(R$setName)
+           g0 <- as.vector(unique(ds1$data[,R$refID]))
+      
+           # For data subset in setNameList, compute the count of common ids
+           input  <-list()
+           for( k in 1:length(setNameList) ) {
+               gk <- getCommonID(R$refID, R$setName ,setNameList[k])
+               input[[k]] <- which(g0 %in% gk)
+           }
+           nsets <- length(setNameList)
+           M <- NULL; for(i in 1:nsets) M <- c(M, input[[i]]);
+           M <- unique(sort(M))
+           V <- NULL; for(i in 1:nsets) V <- cbind(V, (M %in% input[[i]])*1)
+           rownames(V) <- M
+           colnames(V) <- setNameList
+           as.data.frame(V)
       },
 
       getMerged = function(refID, setName1, setName2)

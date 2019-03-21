@@ -17,6 +17,8 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 
 \item{\code{dsname}}{specifies the name of the Dataset to query - Must be specify when creating a new instance of the odamws object.}
 
+\item{\code{delimiter}}{specifies the delimiter used within data subset files}
+
 \item{\code{auth}}{specifies the authentication code to access to the Dataset by this webservice (if required)}
 
 \item{\code{subsets}}{a data.frame object containing metadata related to the data subsets - Initialized during the instantiation step}
@@ -37,6 +39,12 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 
 \item{\code{getMerged(refID, setName1, setName2)}}{[DEPRECATED] Returns a data.frame containing data obtained by merging two subsets (defined by the attribute label of the setName1 and setName2 subsets) that have the same identifiers in common (defined by refID as an identifier attribute label)  i.e. resulting in the intersection of the two identifier sets.}
 
+\item{\code{getSetInCommon(setNameList)}}{Get the data subset in common with the data subset list 'setNameList'. Returns a list containing the elements :
+
+    *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList, 
+    
+    *  setName : the data subset name corresponding to the refID}
+
 \item{\code{getSubsetByName(setNameList, condition = "")}}{Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
         data - a data.frame object containing the data. The column names of this data.frame are gathered according their categories and avaivalble in embedded lists, and described below.
@@ -45,13 +53,15 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 
         varsBySubset - a list containing the 'quantitative' variables by subset.
 
-        samplename - a data.frame containing the metadata about the common identifier, namely the subset name it belongings (Subset), the identifier name (Attribute), the description (Description), the type (Type), and the CVTerm (CV_Term_ID, CV_Term_Name).
+        idSet - a data.frame containing the metadata about the common identifier, namely the subset name it belongings (Subset), the identifier name (Attribute), the description (Description), the type (Type), and the CVTerm (CV_Term_ID, CV_Term_Name).
 
-        samples - the identifier name (Attribute) of the first common data subset.
+        idName - the identifier name (Attribute) of the first common data subset.
 
         LABELS - a data.frame containing the metadata about all attributes - its format is the same as the 'samplename' data.frame.
 
         WSEntry - a data.frame containing the correspondance between some attributes and their alias name, these latter serving within a query to put a constraint a or selection on this attribute. Note: a 'WSEntry' is an alias name associated with an attribute that allows user to query the data subset by putting a filter condition (i.e. a selection constraint) on the corresponding attribute. Not all attributes have a WSEntry but only few ones, especially the attributes within the identifier and factor categories. For instance, the WSEntry of the 'SampleID' attribute is 'sample'. Thus, if you want to select only samples with their ID equal to 365, you have to specify the filter condition as  'sample/365'.}
+
+\item{\code{getUpSetTable(setNameList)}}{Return an encoded dataframe in binary and set up so that columns represent data subsets present in 'setNameList', and each row represents an element (ID). If an element (ID) is in the data subset it is represented as a 1 in that position, otherwise it is represented as a 0. Useful for use with the R package UpSetR (https://cran.r-project.org/package=UpSetR)}
 
 \item{\code{getWS(query = "")}}{Low level routine allowing to retrieve data or metadata from  a query formatted according the ODAM framework specifications - Returns a data.frame object. By default, i.e. with an empty query, a data.frame object containing metadata related to the data subsets is returned.}
 }}
@@ -64,11 +74,11 @@ dn <- show(dh)
 data <- dh$getDataByName('samples','sample/365')
 # Get 'activome' data subset
 ds <- dh$getSubsetByName('activome')
-# Get the merged data of both data subsets based on their common identifier
+# Get the merged data of both data subsets based on their common identifiers
 setNameList <- c("activome", "qNMR_metabo" )
 dsMerged <- dh$getSubsetByName(setNameList)
 }
 }
 \author{
-Daniel Jacob - INRA UMR 1332 BFP (C) 2016
+Daniel Jacob - INRA UMR 1332 BFP (C) 2019
 }

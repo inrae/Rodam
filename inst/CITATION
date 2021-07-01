@@ -1,0 +1,5 @@
+paste0("Daniel Jacob, Romain David, Sophie Aubin, Yves Gibon ",
+       "(2021) ",
+       "Making experimental data tables in the life sciences more FAIR: a pragmatic approach, GigaScience, ",
+       "Volume 9, Issue 12, December 2020, ",
+       "http://dx.doi.org/10.1093/gigascience/giaa144")

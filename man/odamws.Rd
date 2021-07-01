@@ -26,6 +26,8 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 \item{\code{subsetNames}}{a list of the data subset names - Initialized during the instantiation step}
 
 \item{\code{connectList}}{a matrix of the connection graph between data subsets (i.e. the links between each subset with the subset at its origin, so that links can be interpreted as 'obtained from'). The data subsets are referred by their subset number. (corresponding to the 'SetID' column in the 'subsets' field)  - Initialized during the instantiation step.}
+
+\item{\code{msgError}}{contains an error message if an error occurs}
 }}
 
 \section{Methods}{
@@ -45,7 +47,7 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
     
     *  setName : the data subset name corresponding to the refID}
 
-\item{\code{getSubsetByName(setNameList, condition = "")}}{Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
+\item{\code{getSubsetByName(setNameList, condition = "", rmvars = FALSE)}}{Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
         data - a data.frame object containing the data. The column names of this data.frame are gathered according their categories and avaivalble in embedded lists, and described below.
 

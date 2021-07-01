@@ -15,6 +15,7 @@ require(RCurl)
 #' @field subsets a data.frame object containing metadata related to the data subsets - Initialized during the instantiation step
 #' @field subsetNames a list of the data subset names - Initialized during the instantiation step
 #' @field connectList a matrix of the connection graph between data subsets (i.e. the links between each subset with the subset at its origin, so that links can be interpreted as 'obtained from'). The data subsets are referred by their subset number. (corresponding to the 'SetID' column in the 'subsets' field)  - Initialized during the instantiation step.
+#' @field msgError contains an error message if an error occurs
 #' @examples
 #'\dontrun{
 #' dh <- new("odamws", "https://pmb-bordeaux.fr/getdata/", "frim1")
@@ -36,15 +37,16 @@ odamws <- setRefClass("odamws",
       wsURL       = "character",
       dsname      = "character",
       delimiter   = "character",
-      auth        = "numeric",
+      auth        = "character",
       subsets     = "data.frame",
       subsetNames = "character",
-      connectList = "matrix"
+      connectList = "matrix",
+      msgError    = "character"
    ), 
    methods = list(
    
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth=1, delimiter="\t")
+      initialize = function(wsURL, dsname, auth='', delimiter="\t")
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
@@ -52,14 +54,17 @@ odamws <- setRefClass("odamws",
          dsname <<- dsname
          auth <<- auth
          delimiter <<- delimiter
+         msgError <<- ''
 
          # Get subsets information
          subsets <<- getWS('subset')
-         subsets <<- subsets[order(subsets$SetID),]
-         subsetNames <<- as.vector(subsets[,'Subset'])
-         connectList <<- cbind( subsets[subsets$LinkID>0, ]$LinkID , subsets[subsets$LinkID>0, ]$SetID )
-         L<-NULL; for( s in subsets$Subset ) { L <- c(L, dim(getWS(s))[1]) }
-         subsets$Count <<- L
+         if (nchar(msgError)==0) {
+             subsets <<- subsets[order(subsets$SetID),]
+             subsetNames <<- as.vector(subsets[,'Subset'])
+             connectList <<- cbind( subsets[subsets$LinkID>0, ]$LinkID , subsets[subsets$LinkID>0, ]$SetID )
+             L<-NULL; for( s in subsets$Subset ) { L <- c(L, dim(getWS(s))[1]) }
+             subsets$Count <<- L
+         }
       },
 
       getDataTree = function() {
@@ -117,7 +122,12 @@ odamws <- setRefClass("odamws",
       "Low level routine allowing to retrieve data or metadata from  a query formatted according the ODAM framework specifications - Returns a data.frame object. By default, i.e. with an empty query, a data.frame object containing metadata related to the data subsets is returned."
 
          myurl <- paste(wsURL,'/tsv/', dsname, '/', query,"?auth=",auth,sep="");
-         read.csv(textConnection(RCurl::getURL(myurl, ssl.verifypeer = FALSE)), head=TRUE, sep=delimiter);
+         out <- read.csv(textConnection(RCurl::getURL(myurl, ssl.verifypeer = FALSE)), head=TRUE, sep=delimiter);
+         if (dim(out)[1]==0) {
+             msgError <<- gsub("\\.", " ", colnames(out))[1]
+             cat(msgError)
+         }
+         out
       },
 
       getWSEntryByName = function(setName) {
@@ -136,11 +146,11 @@ odamws <- setRefClass("odamws",
          getWS(paste('(',setName,')',slash, condition,sep=''))
       },
 
-      getSubsetByID = function(setID,condition='') {
-         getDataSetByName(subsetNames[setID],condition)
+      getSubsetByID = function(setID,condition='', rmvars=FALSE) {
+         getSubsetByName(subsetNames[setID],condition)
       },
 
-      getSubsetByName = function(setNameList,condition='') {
+      getSubsetByName = function(setNameList,condition='', rmvars=FALSE) {
       "Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
         data - a data.frame object containing the data. The column names of this data.frame are gathered according their categories and avaivalble in embedded lists, and described below.
@@ -229,7 +239,17 @@ odamws <- setRefClass("odamws",
          
          for( i in 1:dim(varnames)[1]) { if (CHAR(varnames$Type[i]) == 'numeric') data[,CHAR(varnames$Attribute[i])] <- NUM(data[,CHAR(varnames$Attribute[i])]); }
          for( i in 1:dim(samplename)[1]) { if (CHAR(samplename$Type[i]) == 'numeric') data[,CHAR(samplename$Attribute[i])] <- NUM(data[,CHAR(samplename$Attribute[i])]); }
-         
+
+         # Remove quantitative variables with all values at zero
+         if (rmvars) {
+            V <- simplify2array( lapply(varnames$Attribute, function(v) { sum( which(data[, CHAR(v)]!=0) ) }) )
+            if (length(which(V==0))>0) {
+               data <- data[, ! colnames(data) %in% CHAR(varnames$Attribute[ c(which(V==0))]) ]
+               LABELS <- LABELS[! LABELS[,1] %in% CHAR(varnames$Attribute[c(which(V==0))]), ]
+               varnames <- varnames[ -c(which(V==0)), ]
+            }
+         }
+
          list( setID=setIDList, setName=setNameList, data=data, 
                samplename=samplename, samples=samples, varsBySubset=varsBySubset,
                varnames=CHAR(varnames$Attribute), facnames=CHAR(facnames$Attribute), 

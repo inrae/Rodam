@@ -18,14 +18,10 @@ Maintainer: Daniel Jacob
 }
 \references{
 \enumerate{
-\item  Docker images of the ODAM software suite
-  \href{https://hub.docker.com/r/odam/getdata/}{https://hub.docker.com/r/odam/getdata/}
-\item  Presentation of the ODAM framework 
-  \href{http://fr.slideshare.net/danieljacob771282/odam-open-data-access-and-mining}{http://fr.slideshare.net/danieljacob771282/odam-open-data-access-and-mining}
-\item  FIRM's data subsets of TSV files consistent with the ODAM framework
-  \href{https://doi.org/10.5281/zenodo.154041}{https://doi.org/10.5281/zenodo.154041}
-\item  Data Explorer online
-  \href{https://pmb-bordeaux.fr/dataexplorer/}{https://pmb-bordeaux.fr/dataexplorer/} 
+\item Making experimental data tables in the life sciences more FAIR: a pragmatic approach
+  \href{https://academic.oup.com/gigascience/article/9/12/giaa144/6034785}{https://academic.oup.com/gigascience/article/9/12/giaa144/6034785}
+\item ODAM: Deployment and User's Guide
+  \href{https://inrae.github.io/ODAM/}{https://inrae.github.io/ODAM/}
 }
 }
 \keyword{ package }

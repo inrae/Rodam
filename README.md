@@ -10,5 +10,5 @@ Rodam implements the wrapper functions for 'ODAM' (Open Data for Access and Mini
 
 * The R ODAM package offers a set of functions for retrieve data and their metadata of datasets that are implemented help with the "Experimental Data Table Management System" (EDTMS) called ODAM, which stands for "Open Data for Access and Mining".
 
-* See [Presentation on Slideshare](http://www.slideshare.net/danieljacob771282/odam-open-data-access-and-mining)
+* See [ODAM: Deployment and User's Guide](https://inrae.github.io/ODAM/)
 

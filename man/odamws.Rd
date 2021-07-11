@@ -28,6 +28,10 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 \item{\code{connectList}}{a matrix of the connection graph between data subsets (i.e. the links between each subset with the subset at its origin, so that links can be interpreted as 'obtained from'). The data subsets are referred by their subset number. (corresponding to the 'SetID' column in the 'subsets' field)  - Initialized during the instantiation step.}
 
 \item{\code{msgError}}{contains an error message if an error occurs}
+
+\item{\code{maxtime}}{defines the maximum request time}
+
+\item{\code{ssl_verifypeer}}{defines if the peer's SSL certificate is verified}
 }}
 
 \section{Methods}{
@@ -75,12 +79,12 @@ dn <- show(dh)
 # Get data from 'samples' subset with a constraint
 data <- dh$getDataByName('samples','sample/365')
 # Get 'activome' data subset
-ds <- dh$getSubsetByName('activome')
+ds <- dh$getSubsetByName('activome') 
 # Get the merged data of both data subsets based on their common identifiers
 setNameList <- c("activome", "qNMR_metabo" )
 dsMerged <- dh$getSubsetByName(setNameList)
 }
 }
 \author{
-Daniel Jacob - INRA UMR 1332 BFP (C) 2019
+Daniel Jacob - INRAE UMR 1332 BFP (C) 2021
 }

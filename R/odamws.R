@@ -1,7 +1,7 @@
-require(RCurl)
+require(httr)
 #' API layer for the ODAM web services
 #'
-#' @author Daniel Jacob - INRA UMR 1332 BFP (C) 2019
+#' @author Daniel Jacob - INRAE UMR 1332 BFP (C) 2021
 #'
 #' @description the class that implements the API layer for the ODAM (Open Data for Access and Mining) web services.
 #'
@@ -16,6 +16,8 @@ require(RCurl)
 #' @field subsetNames a list of the data subset names - Initialized during the instantiation step
 #' @field connectList a matrix of the connection graph between data subsets (i.e. the links between each subset with the subset at its origin, so that links can be interpreted as 'obtained from'). The data subsets are referred by their subset number. (corresponding to the 'SetID' column in the 'subsets' field)  - Initialized during the instantiation step.
 #' @field msgError contains an error message if an error occurs
+#' @field maxtime defines the maximum request time
+#' @field ssl_verifypeer defines if the peer's SSL certificate is verified
 #' @examples
 #'\dontrun{
 #' dh <- new("odamws", "https://pmb-bordeaux.fr/getdata/", "frim1")
@@ -23,12 +25,12 @@ require(RCurl)
 #' # Get data from 'samples' subset with a constraint
 #' data <- dh$getDataByName('samples','sample/365')
 #' # Get 'activome' data subset
-#' ds <- dh$getSubsetByName('activome')
+#' ds <- dh$getSubsetByName('activome') 
 #' # Get the merged data of both data subsets based on their common identifiers
 #' setNameList <- c("activome", "qNMR_metabo" )
 #' dsMerged <- dh$getSubsetByName(setNameList)
 #'}
-#' @import RCurl
+#' @import httr
 #' @importFrom methods setRefClass
 #' @importFrom methods new
 #' @export
@@ -41,12 +43,14 @@ odamws <- setRefClass("odamws",
       subsets     = "data.frame",
       subsetNames = "character",
       connectList = "matrix",
-      msgError    = "character"
+      msgError    = "character",
+      maxtime     = "numeric",
+      ssl_verifypeer = "logical"
    ), 
    methods = list(
    
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth='', delimiter="\t")
+      initialize = function(wsURL, dsname, auth='', delimiter="\t", maxtime=5, ssl_verifypeer = TRUE)
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
@@ -55,6 +59,8 @@ odamws <- setRefClass("odamws",
          auth <<- auth
          delimiter <<- delimiter
          msgError <<- ''
+         maxtime <<- maxtime
+         ssl_verifypeer <<- ssl_verifypeer
 
          # Get subsets information
          subsets <<- getWS('subset')
@@ -121,12 +127,25 @@ odamws <- setRefClass("odamws",
       {
       "Low level routine allowing to retrieve data or metadata from  a query formatted according the ODAM framework specifications - Returns a data.frame object. By default, i.e. with an empty query, a data.frame object containing metadata related to the data subsets is returned."
 
-         myurl <- paste(wsURL,'/tsv/', dsname, '/', query,"?auth=",auth,sep="");
-         out <- read.csv(textConnection(RCurl::getURL(myurl, ssl.verifypeer = FALSE)), head=TRUE, sep=delimiter);
-         if (dim(out)[1]==0) {
-             msgError <<- gsub("\\.", " ", colnames(out))[1]
+         myurl <- paste(wsURL, '/tsv/', dsname, '/', query, sep="")
+         headers <-  c();
+         if ( nchar(auth)>0 ) { headers <- c('x-api-key' = auth) }
+         out <- data.frame()
+         tryCatch({
+             resp <- httr::GET(myurl, config = httr::config(ssl_verifypeer = ssl_verifypeer),
+                                      add_headers(.headers = headers), timeout(maxtime))
+             T <- simplify2array(strsplit(httr::content(resp, as='text'),"\n"))
+             if (length(grep("(DOCTYPE|html)", T[1]))) {
+                 msgError <<- "ERROR: the query-path is not valid"
+             } else {
+                 out <- read.csv(textConnection(T), head=TRUE, sep=delimiter)
+                 if (dim(out)[1]==0) { msgError <<- gsub("\\.", " ", colnames(out))[1] }
+             }
+             if(nchar(msgError)>0) { cat(msgError) }
+         }, error=function(e) {
+             msgError <<- "ERROR : the API host is not responding; it is either not found or does not exist"
              cat(msgError)
-         }
+         })
          out
       },
 
@@ -174,7 +193,7 @@ odamws <- setRefClass("odamws",
          # Get DATA
          slash <- ifelse ( nchar(condition)==0 || substr(condition,1,1)=='/', '', '/' )
          data <- getWS(paste('(',strNameList,')',slash, condition,sep=''))
-         
+
          # Get quantitative variable features
          varnames <- NULL
          Q <- getWS(paste('(',strNameList,')/quantitative',sep=''))

@@ -1,6 +1,6 @@
 Package: Rodam
 Title: Wrapper Functions for 'ODAM' (Open Data for Access and Mining) Web Services
-Version: 0.1.8
+Version: 0.1.9
 Date: 2021-06-29
 Authors@R: c(
     person("Daniel", "Jacob", email="daniel.jacob@inrae.fr", role=c("cre", "aut"), comment=c(ORCID="0000-0002-6687-7169")))
@@ -11,7 +11,7 @@ Description: 'ODAM' (Open Data for Access and Mining) is a framework that implem
 Depends:
     R (>= 3.1.1),
     methods,
-    RCurl (>= 1.95)
+    httr (>= 1.4.2)
 License: LGPL (>=3)
 Encoding: UTF-8
 Suggests:

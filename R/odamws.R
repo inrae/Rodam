@@ -10,7 +10,6 @@ require(httr)
 #' @rdname odamws
 #' @field wsURL defines the URL of the webservice - Must be specify when creating a new instance of the odamws object.
 #' @field dsname specifies the name of the Dataset to query - Must be specify when creating a new instance of the odamws object.
-#' @field delimiter specifies the delimiter used within data subset files 
 #' @field auth specifies the authentication code to access to the Dataset by this webservice (if required)
 #' @field subsets a data.frame object containing metadata related to the data subsets - Initialized during the instantiation step
 #' @field subsetNames a list of the data subset names - Initialized during the instantiation step
@@ -38,7 +37,6 @@ odamws <- setRefClass("odamws",
    fields = list(
       wsURL       = "character",
       dsname      = "character",
-      delimiter   = "character",
       auth        = "character",
       subsets     = "data.frame",
       subsetNames = "character",
@@ -50,14 +48,13 @@ odamws <- setRefClass("odamws",
    methods = list(
    
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth='', delimiter="\t", maxtime=5, ssl_verifypeer = TRUE)
+      initialize = function(wsURL, dsname, auth='', maxtime=5, ssl_verifypeer = TRUE)
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
          wsURL <<- wsURL
          dsname <<- dsname
          auth <<- auth
-         delimiter <<- delimiter
          msgError <<- ''
          maxtime <<- maxtime
          ssl_verifypeer <<- ssl_verifypeer
@@ -138,7 +135,7 @@ odamws <- setRefClass("odamws",
              if (length(grep("(DOCTYPE|html)", T[1]))) {
                  msgError <<- "ERROR: the query-path is not valid"
              } else {
-                 out <- read.csv(textConnection(T), head=TRUE, sep=delimiter)
+                 out <- read.csv(textConnection(T), head=TRUE, sep="\t")
                  if (dim(out)[1]==0) { msgError <<- gsub("\\.", " ", colnames(out))[1] }
              }
              if(nchar(msgError)>0) { cat(msgError) }
@@ -240,16 +237,16 @@ odamws <- setRefClass("odamws",
          
          # Merge all labels
          LABELS <- rbind( 
-            matrix( c( as.matrix(samplename)[,c(1:3)], 'Identifier', as.matrix(samplename)[,c(5:6)]), ncol=6, byrow=FALSE  ),
-            matrix( c( as.matrix(facnames)[,c(1:3)], replicate(dim(facnames)[1],'Factor'  ), as.matrix(facnames)[,c(5:6)] ), ncol=6, byrow=FALSE  ),
-            matrix( c( as.matrix(varnames)[,c(1:3)], replicate(dim(varnames)[1],'Variable'), as.matrix(varnames)[,c(5:6)] ), ncol=6, byrow=FALSE  )
+            matrix( c( as.matrix(samplename)[,c(1:4)], 'Identifier', as.matrix(samplename)[,c(6:7)]), ncol=7, byrow=FALSE  ),
+            matrix( c( as.matrix(facnames)[,c(1:4)], replicate(dim(facnames)[1],'Factor'  ), as.matrix(facnames)[,c(6:7)] ), ncol=7, byrow=FALSE  ),
+            matrix( c( as.matrix(varnames)[,c(1:4)], replicate(dim(varnames)[1],'Variable'), as.matrix(varnames)[,c(6:7)] ), ncol=7, byrow=FALSE  )
          )
          if (dim(as.matrix(qualnames))[1]>0 ) { LABELS <- rbind ( LABELS, 
-            matrix( c( as.matrix(qualnames)[,c(1:3)], replicate(dim(qualnames)[1],'Feature'), as.matrix(qualnames)[,c(5:6)] ), ncol=6, byrow=FALSE )
+            matrix( c( as.matrix(qualnames)[,c(1:4)], replicate(dim(qualnames)[1],'Feature'), as.matrix(qualnames)[,c(6:7)] ), ncol=7, byrow=FALSE )
          )}
-         colnames(LABELS) <- c( 'Subset', 'Attribute', 'Description', 'Type', 'CV_Term_ID ', 'CV_Term_Name' )
-         LABELS[,5] <- sapply(CHAR(LABELS[,5]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
+         colnames(LABELS) <- c( 'Subset', 'Attribute', 'WSEntry', 'Description', 'Type', 'CV_Term_ID ', 'CV_Term_Name' )
          LABELS[,6] <- sapply(CHAR(LABELS[,6]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
+         LABELS[,7] <- sapply(CHAR(LABELS[,7]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
          LABELS <- as.data.frame(LABELS)
          
          varsBySubset <- list()

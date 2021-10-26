@@ -17,8 +17,6 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 
 \item{\code{dsname}}{specifies the name of the Dataset to query - Must be specify when creating a new instance of the odamws object.}
 
-\item{\code{delimiter}}{specifies the delimiter used within data subset files}
-
 \item{\code{auth}}{specifies the authentication code to access to the Dataset by this webservice (if required)}
 
 \item{\code{subsets}}{a data.frame object containing metadata related to the data subsets - Initialized during the instantiation step}

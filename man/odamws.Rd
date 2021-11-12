@@ -45,9 +45,9 @@ Provides functions to allow you to retrieve online data using ODAM Web Services.
 
 \item{\code{getSetInCommon(setNameList)}}{Get the data subset in common with the data subset list 'setNameList'. Returns a list containing the elements :
 
-    *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList, 
-    
-    *  setName : the data subset name corresponding to the refID}
+          *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList,
+
+          *  setName : the data subset name corresponding to the refID}
 
 \item{\code{getSubsetByName(setNameList, condition = "", rmvars = FALSE)}}{Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
@@ -77,7 +77,7 @@ dn <- show(dh)
 # Get data from 'samples' subset with a constraint
 data <- dh$getDataByName('samples','sample/365')
 # Get 'activome' data subset
-ds <- dh$getSubsetByName('activome') 
+ds <- dh$getSubsetByName('activome')
 # Get the merged data of both data subsets based on their common identifiers
 setNameList <- c("activome", "qNMR_metabo" )
 dsMerged <- dh$getSubsetByName(setNameList)

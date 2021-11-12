@@ -6,7 +6,7 @@ require(httr)
 #' @description the class that implements the API layer for the ODAM (Open Data for Access and Mining) web services.
 #'
 #' Provides functions to allow you to retrieve online data using ODAM Web Services. This obviously requires that data are implemented according the ODAM approach (Open Data for Access and Mining), namely that the data subsets were deposited in the suitable data repository in the form of TSV files associated with  their metadata also described  in TSV files.
-#' 
+#'
 #' @rdname odamws
 #' @field wsURL defines the URL of the webservice - Must be specify when creating a new instance of the odamws object.
 #' @field dsname specifies the name of the Dataset to query - Must be specify when creating a new instance of the odamws object.
@@ -24,7 +24,7 @@ require(httr)
 #' # Get data from 'samples' subset with a constraint
 #' data <- dh$getDataByName('samples','sample/365')
 #' # Get 'activome' data subset
-#' ds <- dh$getSubsetByName('activome') 
+#' ds <- dh$getSubsetByName('activome')
 #' # Get the merged data of both data subsets based on their common identifiers
 #' setNameList <- c("activome", "qNMR_metabo" )
 #' dsMerged <- dh$getSubsetByName(setNameList)
@@ -33,7 +33,7 @@ require(httr)
 #' @importFrom methods setRefClass
 #' @importFrom methods new
 #' @export
-odamws <- setRefClass("odamws", 
+odamws <- setRefClass("odamws",
    fields = list(
       wsURL       = "character",
       dsname      = "character",
@@ -44,9 +44,9 @@ odamws <- setRefClass("odamws",
       msgError    = "character",
       maxtime     = "numeric",
       ssl_verifypeer = "logical"
-   ), 
+   ),
    methods = list(
-   
+
       # Initialize the attributes
       initialize = function(wsURL, dsname, auth='', maxtime=5, ssl_verifypeer = TRUE)
       {
@@ -150,23 +150,23 @@ odamws <- setRefClass("odamws",
          getWS(paste('(',setName,')/entry',sep=''))
       },
 
-      getDataByID = function(setID,condition='')
+      getDataByID = function(setID, condition='')
       {
          getDataByName(subsetNames[setID],condition)
       },
 
-      getDataByName = function(setName,condition='')
+      getDataByName = function(setName, condition='')
       {
       "Returns the data of the 'setName' subset as a data.frame"
          slash <- ifelse ( nchar(condition)==0 || substr(condition,1,1)=='/', '', '/' )
          getWS(paste('(',setName,')',slash, condition,sep=''))
       },
 
-      getSubsetByID = function(setID,condition='', rmvars=FALSE) {
+      getSubsetByID = function(setID, condition='', rmvars=FALSE) {
          getSubsetByName(subsetNames[setID],condition)
       },
 
-      getSubsetByName = function(setNameList,condition='', rmvars=FALSE) {
+      getSubsetByName = function(setNameList, condition='', rmvars=FALSE) {
       "Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
         data - a data.frame object containing the data. The column names of this data.frame are gathered according their categories and avaivalble in embedded lists, and described below.
@@ -186,7 +186,7 @@ odamws <- setRefClass("odamws",
          # Get SetIDs
          setIDList <- subsets[ subsets$Subset %in% setNameList, ]$SetID
          strNameList <- paste(setNameList, collapse=',')
-         
+
          # Get DATA
          slash <- ifelse ( nchar(condition)==0 || substr(condition,1,1)=='/', '', '/' )
          data <- getWS(paste('(',strNameList,')',slash, condition,sep=''))
@@ -195,64 +195,63 @@ odamws <- setRefClass("odamws",
          varnames <- NULL
          Q <- getWS(paste('(',strNameList,')/quantitative',sep=''))
          for( i in 1:length(setNameList) ) varnames <- rbind(varnames,  Q[Q$Subset == setNameList[i], ])
-         
+
          # Get qualitative variable features
          qualnames <- NULL
          Q <- getWS(paste('(',strNameList,')/qualitative',sep=''))
          for( i in 1:length(setNameList) ) qualnames <- rbind(qualnames,  Q[Q$Subset == setNameList[i], ])
-         
+
          # Get factor features
          facnames <- getWS(paste('(',strNameList,')/factor',sep=''))
-         
-         # Get WSEntries 
+
+         # Get WSEntries
          entries <- getWS(paste('(',strNameList,')/entry',sep=''))
-         
+
          I <- NULL
          for( i in 1:length(setNameList) ) {
             I <- rbind( I, getWS(paste('(',setNameList[i],')/identifier',sep='')) )
          }
-         
+
          # Get Samples: attribute features, list of identifiers
          L <- NULL
-         if (length(setNameList)==1) { 
-             L[1] <- subsets[ subsets$Subset==setNameList[i], ]$SetID
+         if (length(setNameList)==1) {
+             L[1] <- subsets[ subsets$Subset==setNameList[1], ]$SetID
          } else for( i in 1:length(setNameList) ) {
-             l <- c( subsets[ subsets$Subset==setNameList[i], ]$LinkID )
+             l <- c( subsets[ subsets$Subset==setNameList[i], ]$SetID )
              while( l[length(l)]>0 ) l <- c(l, subsets[ subsets$SetID==l[length(l)], ]$LinkID )
-             if (i==1) { 
+             if (i==1) {
                 L <- l
              } else {
-                L <- L[ which( (L-l)==0 ) ]
+                L <- l[l %in% L]
              }
          }
          samples <- CHAR(subsets[ subsets$SetID==L[1], ]$Identifier)
-         
+
          setName <- subsets[ subsets$SetID==L[1], ]$Subset
          Q <- getWS(paste('(',setName,')/identifier',sep=''))
-         samplename <- Q[Q$Subset == setName, ]
-         
+         samplename <- Q[Q$Subset %in% setName, ]
+
          # Get all qualitative features
          features <- rbind(I, facnames, qualnames)
-         CHAR(unique(features$Attribute))
-         
+
          # Merge all labels
-         LABELS <- rbind( 
+         LABELS <- rbind(
             matrix( c( as.matrix(samplename)[,c(1:4)], 'Identifier', as.matrix(samplename)[,c(6:7)]), ncol=7, byrow=FALSE  ),
             matrix( c( as.matrix(facnames)[,c(1:4)], replicate(dim(facnames)[1],'Factor'  ), as.matrix(facnames)[,c(6:7)] ), ncol=7, byrow=FALSE  ),
             matrix( c( as.matrix(varnames)[,c(1:4)], replicate(dim(varnames)[1],'Variable'), as.matrix(varnames)[,c(6:7)] ), ncol=7, byrow=FALSE  )
          )
-         if (dim(as.matrix(qualnames))[1]>0 ) { LABELS <- rbind ( LABELS, 
+         if (dim(as.matrix(qualnames))[1]>0 ) { LABELS <- rbind ( LABELS,
             matrix( c( as.matrix(qualnames)[,c(1:4)], replicate(dim(qualnames)[1],'Feature'), as.matrix(qualnames)[,c(6:7)] ), ncol=7, byrow=FALSE )
          )}
          colnames(LABELS) <- c( 'Subset', 'Attribute', 'WSEntry', 'Description', 'Type', 'CV_Term_ID ', 'CV_Term_Name' )
          LABELS[,6] <- sapply(CHAR(LABELS[,6]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
          LABELS[,7] <- sapply(CHAR(LABELS[,7]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
          LABELS <- as.data.frame(LABELS)
-         
+
          varsBySubset <- list()
          for(setName in setNameList)
               varsBySubset[[setName]] <- CHAR(varnames$Attribute[ varnames$Attribute %in% LABELS[ LABELS$Subset==setName, ]$Attribute ])
-         
+
          for( i in 1:dim(varnames)[1]) { if (CHAR(varnames$Type[i]) == 'numeric') data[,CHAR(varnames$Attribute[i])] <- NUM(data[,CHAR(varnames$Attribute[i])]); }
          for( i in 1:dim(samplename)[1]) { if (CHAR(samplename$Type[i]) == 'numeric') data[,CHAR(samplename$Attribute[i])] <- NUM(data[,CHAR(samplename$Attribute[i])]); }
 
@@ -266,10 +265,10 @@ odamws <- setRefClass("odamws",
             }
          }
 
-         list( setID=setIDList, setName=setNameList, data=data, 
+         list( setID=setIDList, setName=setNameList, data=data,
                samplename=samplename, samples=samples, varsBySubset=varsBySubset,
-               varnames=CHAR(varnames$Attribute), facnames=CHAR(facnames$Attribute), 
-               qualnames=CHAR(qualnames$Attribute), features=CHAR(unique(features$Attribute)), 
+               varnames=CHAR(varnames$Attribute), facnames=CHAR(facnames$Attribute),
+               qualnames=CHAR(qualnames$Attribute), features=CHAR(unique(features$Attribute)),
                WSEntry = entries, LABELS=LABELS )
       },
 
@@ -280,13 +279,13 @@ odamws <- setRefClass("odamws",
          ds2 <- getSubsetByName(setName2)
          unique(ds1$data[ ds1$data[, refID ] %in% ds2$data[, refID ], refID ])
       },
-      
+
       getSetInCommon = function(setNameList)
       {
       "Get the data subset in common with the data subset list 'setNameList'. Returns a list containing the elements :
-      
-          *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList, 
-          
+
+          *  refID: Main Keyname serving as reference ID along with all data subsets defined in setNameList,
+
           *  setName : the data subset name corresponding to the refID"
          setlines <- which(subsets$Subset %in% setNameList)
          setIDS <- unique(sort(subsets[setlines, ]$Identifier))
@@ -308,7 +307,7 @@ odamws <- setRefClass("odamws",
            # Get the reference data subset
            ds1 <- getSubsetByName(R$setName)
            g0 <- as.vector(unique(ds1$data[,R$refID]))
-      
+
            # For data subset in setNameList, compute the count of common ids
            input  <-list()
            for( k in 1:length(setNameList) ) {

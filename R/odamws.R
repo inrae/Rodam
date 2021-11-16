@@ -116,7 +116,7 @@ odamws <- setRefClass("odamws",
 
       trim = function(x) gsub("^\\s+|\\s+$", "", x),
       NUM = function(x) as.numeric(as.vector(x)),
-      CHAR = function(x) as.vector(x),
+      VEC = function(x) as.vector(x),
       dateToStr = function(x) as.Date(x, origin = "1899-12-30"),
       timeToStr = function(x) paste0(round(x*24,0),'h',round((x*24-round(x*24,0))*60,0)),
 
@@ -197,20 +197,19 @@ odamws <- setRefClass("odamws",
          for( i in 1:length(setNameList) ) varnames <- rbind(varnames,  Q[Q$Subset == setNameList[i], ])
 
          # Get qualitative variable features
-         qualnames <- NULL
-         Q <- getWS(paste('(',strNameList,')/qualitative',sep=''))
-         for( i in 1:length(setNameList) ) qualnames <- rbind(qualnames,  Q[Q$Subset == setNameList[i], ])
+         qualnames <- getWS(paste('(',strNameList,')/qualitative',sep=''))
 
          # Get factor features
          facnames <- getWS(paste('(',strNameList,')/factor',sep=''))
 
+         # Get factor features
+         identifiers <- getWS(paste('(',strNameList,')/identifier',sep=''))
+
          # Get WSEntries
          entries <- getWS(paste('(',strNameList,')/entry',sep=''))
 
-         I <- NULL
-         for( i in 1:length(setNameList) ) {
-            I <- rbind( I, getWS(paste('(',setNameList[i],')/identifier',sep='')) )
-         }
+         # Gather all qualitative features
+         features <- rbind(identifiers, facnames, qualnames)
 
          # Get Samples: attribute features, list of identifiers
          L <- NULL
@@ -225,18 +224,14 @@ odamws <- setRefClass("odamws",
                 L <- l[l %in% L]
              }
          }
-         samples <- CHAR(subsets[ subsets$SetID==L[1], ]$Identifier)
 
          setName <- subsets[ subsets$SetID==L[1], ]$Subset
          Q <- getWS(paste('(',setName,')/identifier',sep=''))
          samplename <- Q[Q$Subset %in% setName, ]
 
-         # Get all qualitative features
-         features <- rbind(I, facnames, qualnames)
-
          # Merge all labels
          LABELS <- rbind(
-            matrix( c( as.matrix(samplename)[,c(1:4)], 'Identifier', as.matrix(samplename)[,c(6:7)]), ncol=7, byrow=FALSE  ),
+            matrix( c( as.matrix(identifiers)[,c(1:4)], replicate(nrow(identifiers),'Identifier' ), as.matrix(identifiers)[,c(6:7)]), ncol=7, byrow=FALSE  ),
             matrix( c( as.matrix(facnames)[,c(1:4)], replicate(dim(facnames)[1],'Factor'  ), as.matrix(facnames)[,c(6:7)] ), ncol=7, byrow=FALSE  ),
             matrix( c( as.matrix(varnames)[,c(1:4)], replicate(dim(varnames)[1],'Variable'), as.matrix(varnames)[,c(6:7)] ), ncol=7, byrow=FALSE  )
          )
@@ -244,31 +239,31 @@ odamws <- setRefClass("odamws",
             matrix( c( as.matrix(qualnames)[,c(1:4)], replicate(dim(qualnames)[1],'Feature'), as.matrix(qualnames)[,c(6:7)] ), ncol=7, byrow=FALSE )
          )}
          colnames(LABELS) <- c( 'Subset', 'Attribute', 'WSEntry', 'Description', 'Type', 'CV_Term_ID ', 'CV_Term_Name' )
-         LABELS[,6] <- sapply(CHAR(LABELS[,6]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
-         LABELS[,7] <- sapply(CHAR(LABELS[,7]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
+         LABELS[,6] <- sapply(VEC(LABELS[,6]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
+         LABELS[,7] <- sapply(VEC(LABELS[,7]), function(x) { ifelse( ! is.na(x), x, "NA" ); })
          LABELS <- as.data.frame(LABELS)
 
          varsBySubset <- list()
          for(setName in setNameList)
-              varsBySubset[[setName]] <- CHAR(varnames$Attribute[ varnames$Attribute %in% LABELS[ LABELS$Subset==setName, ]$Attribute ])
+              varsBySubset[[setName]] <- VEC(varnames$Attribute[ varnames$Attribute %in% LABELS[ LABELS$Subset==setName, ]$Attribute ])
 
-         for( i in 1:dim(varnames)[1]) { if (CHAR(varnames$Type[i]) == 'numeric') data[,CHAR(varnames$Attribute[i])] <- NUM(data[,CHAR(varnames$Attribute[i])]); }
-         for( i in 1:dim(samplename)[1]) { if (CHAR(samplename$Type[i]) == 'numeric') data[,CHAR(samplename$Attribute[i])] <- NUM(data[,CHAR(samplename$Attribute[i])]); }
+         for( i in 1:dim(varnames)[1]) { if (VEC(varnames$Type[i]) == 'numeric') data[,VEC(varnames$Attribute[i])] <- NUM(data[,VEC(varnames$Attribute[i])]); }
+         for( i in 1:dim(samplename)[1]) { if (VEC(samplename$Type[i]) == 'numeric') data[,VEC(samplename$Attribute[i])] <- NUM(data[,VEC(samplename$Attribute[i])]); }
 
          # Remove quantitative variables with all values at zero
          if (rmvars) {
-            V <- simplify2array( lapply(varnames$Attribute, function(v) { sum( which(data[, CHAR(v)]!=0) ) }) )
+            V <- simplify2array( lapply(varnames$Attribute, function(v) { sum( which(data[, VEC(v)]!=0) ) }) )
             if (length(which(V==0))>0) {
-               data <- data[, ! colnames(data) %in% CHAR(varnames$Attribute[ c(which(V==0))]) ]
-               LABELS <- LABELS[! LABELS[,1] %in% CHAR(varnames$Attribute[c(which(V==0))]), ]
+               data <- data[, ! colnames(data) %in% VEC(varnames$Attribute[ c(which(V==0))]) ]
+               LABELS <- LABELS[! LABELS[,1] %in% VEC(varnames$Attribute[c(which(V==0))]), ]
                varnames <- varnames[ -c(which(V==0)), ]
             }
          }
 
-         list( setID=setIDList, setName=setNameList, data=data,
-               samplename=samplename, samples=samples, varsBySubset=varsBySubset,
-               varnames=CHAR(varnames$Attribute), facnames=CHAR(facnames$Attribute),
-               qualnames=CHAR(qualnames$Attribute), features=CHAR(unique(features$Attribute)),
+         list( setID=setIDList, setName=setNameList, data=data[ , unique(LABELS$Attribute) ],
+               samplename=VEC(samplename$Attribute), identifiers=unique(VEC(identifiers$Attribute)),
+               varnames=VEC(varnames$Attribute), varsBySubset=varsBySubset, facnames=VEC(facnames$Attribute),
+               qualnames=VEC(qualnames$Attribute), features=VEC(unique(features$Attribute)),
                WSEntry = entries, LABELS=LABELS )
       },
 

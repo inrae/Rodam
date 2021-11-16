@@ -1,7 +1,7 @@
 Package: Rodam
 Title: Wrapper Functions for 'ODAM' (Open Data for Access and Mining) Web Services
-Version: 0.1.12
-Date: 2021-11-10
+Version: 0.1.14
+Date: 2021-11-16
 Authors@R: c(
     person("Daniel", "Jacob", email="daniel.jacob@inrae.fr", role=c("cre", "aut"), comment=c(ORCID="0000-0002-6687-7169")))
 Copyright: Institut National de la Recherche pout l’Agriculture, l’Alimentation et l'Environnment (INRAE)

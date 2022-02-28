@@ -45,10 +45,11 @@ odamws <- setRefClass("odamws",
       maxtime     = "numeric",
       ssl_verifypeer = "logical"
    ),
+
    methods = list(
 
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth='', maxtime=5, ssl_verifypeer = TRUE)
+      initialize = function(wsURL, dsname, auth='', maxtime=30, ssl_verifypeer = TRUE)
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
@@ -136,7 +137,7 @@ odamws <- setRefClass("odamws",
                  msgError <<- "ERROR: the query-path is not valid"
              } else {
                  out <- read.csv(textConnection(T), head=TRUE, sep="\t")
-                 if (dim(out)[1]==0) { msgError <<- gsub("\\.", " ", colnames(out))[1] }
+                 if (nrow(out)==0) { msgError <<- gsub("\\.", " ", colnames(out))[1] }
              }
              if(nchar(msgError)>0) { cat(msgError) }
          }, error=function(e) {
@@ -162,11 +163,13 @@ odamws <- setRefClass("odamws",
          getWS(paste('(',setName,')',slash, condition,sep=''))
       },
 
-      getSubsetByID = function(setID, condition='', rmvars=FALSE) {
+      getSubsetByID = function(setID, condition='', rmvars=FALSE)
+      {
          getSubsetByName(subsetNames[setID],condition)
       },
 
-      getSubsetByName = function(setNameList, condition='', rmvars=FALSE) {
+      getSubsetByName = function(setNameList, condition='', rmvars=FALSE)
+      {
       "Returns both data and metadatas of the subsets defined by 'setNameList' as a list of objects. 'setNameList' can contain one or more subset names. If 'setNameList' contains two or more subset names, the returned data set will correspond to the merged data subsets based on the identifiers of the first common data subset :
 
         data - a data.frame object containing the data. The column names of this data.frame are gathered according their categories and avaivalble in embedded lists, and described below.

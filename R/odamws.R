@@ -43,13 +43,14 @@ odamws <- setRefClass("odamws",
       connectList = "matrix",
       msgError    = "character",
       maxtime     = "numeric",
-      ssl_verifypeer = "logical"
+      ssl_verifypeer = "logical",
+      myip        = "character"
    ),
 
    methods = list(
 
       # Initialize the attributes
-      initialize = function(wsURL, dsname, auth='', maxtime=30, ssl_verifypeer = TRUE)
+      initialize = function(wsURL, dsname, auth='', maxtime=30, ssl_verifypeer = TRUE, myip=NULL)
       {
          options(stringsAsFactors=FALSE)
          options(warn=-1)
@@ -59,6 +60,14 @@ odamws <- setRefClass("odamws",
          msgError <<- ''
          maxtime <<- maxtime
          ssl_verifypeer <<- ssl_verifypeer
+
+         # if NULL get my IP
+         if (is.null(myip)) {
+             myIPs <- gsub(".*? ([[:digit:]])", "\\1", system("ipconfig", intern=T)[grep("IPv4", system("ipconfig", intern = T))])
+             myip <<- myIPs[1]
+         } else {
+             myip <<- myip
+         }
 
          # Get subsets information
          subsets <<- getWS('subset')
@@ -126,8 +135,8 @@ odamws <- setRefClass("odamws",
       "Low level routine allowing to retrieve data or metadata from  a query formatted according the ODAM framework specifications - Returns a data.frame object. By default, i.e. with an empty query, a data.frame object containing metadata related to the data subsets is returned."
 
          myurl <- paste(wsURL, '/tsv/', dsname, '/', query, sep="")
-         headers <-  c();
-         if ( nchar(auth)>0 ) { headers <- c('x-api-key' = auth) }
+         headers <- c('x-forwarded-for' = myip, 'x-api-ip' = myip);
+         if ( nchar(auth)>0 ) { headers <- c(headers, 'x-api-key' = auth) }
          out <- data.frame()
          tryCatch({
              resp <- httr::GET(myurl, config = httr::config(ssl_verifypeer = ssl_verifypeer),
